@@ -78,7 +78,7 @@ if __name__ == "__main__":
                         print(f"\t{domain} - Error: {email_verify_result['message']}")
                     elif email_verify_result['deliverable']:
                         data_found = True
-                        print("\t*** Email found: {email} ***")
+                        print(f"\t*** Email found: {email} ***")
                         with open(FOUND_ENTRIES_OUTPUT_FILE, 'a') as f:
                             f.write(f"{first_name},{last_name},{company_name},{email}\n")
                         break

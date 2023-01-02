@@ -1,7 +1,11 @@
+import os
+from dotenv import load_dotenv
+load_dotenv()
+
 from boto3 import Session
 
-ACCESS_KEY = "AKIA34ZZEVZ6BCEAKY7T"
-SECRET_KEY = "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"
+ACCESS_KEY = os.getenv("ACCESS_KEY")
+SECRET_KEY = os.getenv("SECRET_KEY")
 
 
 class Boto3Session:
