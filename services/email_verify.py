@@ -7,7 +7,7 @@ import smtplib
 import socks
 
 from dns import resolver
-from socks_smtp import SocksSMTP as SMTP
+from smtp.socks_smtp import SocksSMTP as SMTP
 
 from common.execptions import UnknownProxyError, EmailFormatError, SMTPRecepientException
 from common.error_handlers import handle_error, handle_550, handle_unrecognised
@@ -22,7 +22,7 @@ proxy = {
 # create a namedtuple to hold the email address
 Address = namedtuple("Address", ["name", "addr", "username", "domain"])
 
-class Verifier:
+class VerifyEmailService:
 
     def __init__(
         self,
@@ -163,19 +163,3 @@ class Verifier:
                 lookup['message'] = "Internal Error. Maybe blacklisted"
 
         return lookup
-    
-if __name__ == "__main__":
-    emails = [
-        "vermasubodhk@gmail.com",
-        # "subodh.verma.min19@iitbhu.ac.in",
-        # "subodh.verma.min19@itbhu.ac.in",
-        # "subodhlucky6262@gmail.com",
-        # "subbo@gmail.com"
-    ]
-    v = Verifier(source_addr='user@example.com')
-    for email in emails:
-        count = 1
-        while(True):
-            l = v.verify(email)
-            print(count, l)
-            count += 1
