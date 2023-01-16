@@ -1,12 +1,15 @@
-import sys, csv
+import sys, csv, requests
 
 from containers import ExtractionContainer
 
-BUCKET_NAME = "emailer-backend-static"
-FOUND_ENTRIES_UPLOAD_PATH = "extraction_data/stage2/{extraction_id}/found_entries.csv"
-FAILED_ENTRIES_UPLOAD_PATH = "extraction_data/stage2/{extraction_id}/failed_entries.csv"
+BACKEND_URL = "https://api.massemail.pro"
+# BACKEND_URL = "http://localhost:8000"
 
-FOUND_ENTRIES_OUTPUT_FILE = "found_entries.csv"
+BUCKET_NAME = "emailer-backend-static"
+FOUND_ENTRIES_UPLOAD_PATH = "extraction_data/{extraction_id}/stage1/output.csv"
+FAILED_ENTRIES_UPLOAD_PATH = "extraction_data/{extraction_id}/stage1/failed_entries.csv"
+
+FOUND_ENTRIES_OUTPUT_FILE = "output.csv"
 FAILED_ENTRIES_OUTPUT_FILE = "failed_entries.csv"
 
 def clear_output_files():
@@ -90,8 +93,25 @@ if __name__ == "__main__":
     s3.upload_object(
         BUCKET_NAME, FOUND_ENTRIES_UPLOAD_PATH.format(extraction_id=extraction_id), FOUND_ENTRIES_OUTPUT_FILE
     )
+    r = requests.post(
+        f"{BACKEND_URL}/extraction/stage2/complete/",
+        json={
+            "uuid": extraction_id,
+            "result_file_url": f"https://{BUCKET_NAME}.s3.amazonaws.com/{FOUND_ENTRIES_UPLOAD_PATH.format(extraction_id=extraction_id)}"
+        }
+    )
+    print(r.json())
+
     s3.upload_object(
         BUCKET_NAME, FAILED_ENTRIES_UPLOAD_PATH.format(extraction_id=extraction_id), FAILED_ENTRIES_OUTPUT_FILE
     )
+    r = requests.post(
+        f"{BACKEND_URL}/extraction/stage2/failed/",
+        json={
+            "uuid": extraction_id,
+            "result_file_url": f"https://{BUCKET_NAME}.s3.amazonaws.com/{FAILED_ENTRIES_UPLOAD_PATH.format(extraction_id=extraction_id)}"
+        }
+    )
+    print(r.json())
 
         
