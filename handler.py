@@ -1,4 +1,6 @@
 import sys, csv, requests
+from dotenv import load_dotenv
+load_dotenv()
 
 from containers import ExtractionContainer
 
@@ -6,8 +8,8 @@ BACKEND_URL = "https://api.massemail.pro"
 # BACKEND_URL = "http://localhost:8000"
 
 BUCKET_NAME = "emailer-backend-static"
-FOUND_ENTRIES_UPLOAD_PATH = "extraction_data/{extraction_id}/stage1/output.csv"
-FAILED_ENTRIES_UPLOAD_PATH = "extraction_data/{extraction_id}/stage1/failed_entries.csv"
+FOUND_ENTRIES_UPLOAD_PATH = "extraction_data/{extraction_id}/stage2/output.csv"
+FAILED_ENTRIES_UPLOAD_PATH = "extraction_data/{extraction_id}/stage2/failed_entries.csv"
 
 FOUND_ENTRIES_OUTPUT_FILE = "output.csv"
 FAILED_ENTRIES_OUTPUT_FILE = "failed_entries.csv"
@@ -26,11 +28,11 @@ email_creator = extraction_container.email_creator()
 email_verify = extraction_container.email_verify()
 
 if __name__ == "__main__":
-    file_key = sys.argv[1]
-    extraction_id = sys.argv[2]
+    extraction_id = sys.argv[1]
     clear_output_files()
 
     data_file = "data2.csv"
+    file_key = "extraction_data/{extraction_id}/stage1/output.csv".format(extraction_id=extraction_id)
     s3.download_file(
         bucket=BUCKET_NAME, key=file_key, download_path=data_file
     )
@@ -90,6 +92,7 @@ if __name__ == "__main__":
                 with open(FAILED_ENTRIES_OUTPUT_FILE, 'a') as f:
                     f.write(f"{first_name},{last_name},{company_name},Email not found\n")
 
+    print("starting found entries file upload to s3")
     s3.upload_object(
         BUCKET_NAME, FOUND_ENTRIES_UPLOAD_PATH.format(extraction_id=extraction_id), FOUND_ENTRIES_OUTPUT_FILE
     )
@@ -100,8 +103,9 @@ if __name__ == "__main__":
             "result_file_url": f"https://{BUCKET_NAME}.s3.amazonaws.com/{FOUND_ENTRIES_UPLOAD_PATH.format(extraction_id=extraction_id)}"
         }
     )
-    print(r.json())
+    print("found entries backend response: ", r)
 
+    print("starting failed entries file upload to s3")
     s3.upload_object(
         BUCKET_NAME, FAILED_ENTRIES_UPLOAD_PATH.format(extraction_id=extraction_id), FAILED_ENTRIES_OUTPUT_FILE
     )
@@ -112,6 +116,6 @@ if __name__ == "__main__":
             "result_file_url": f"https://{BUCKET_NAME}.s3.amazonaws.com/{FAILED_ENTRIES_UPLOAD_PATH.format(extraction_id=extraction_id)}"
         }
     )
-    print(r.json())
+    print("failed entries backend response: ", r)
 
         
