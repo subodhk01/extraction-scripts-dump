@@ -15,12 +15,16 @@ class ExtractDomainService:
         soup = BeautifulSoup(content, 'html.parser')
 
         search = soup.find(id = 'search')
-        first_link = search.find('a')
+        if search:
+            first_link = search.find('a')
 
-        domain = first_link['href']
-        domain = domain.split('/')[2]
-        domain = domain.split('www.')[-1]
-        return domain
+            domain = first_link['href']
+            domain = domain.split('/')[2]
+            domain = domain.split('www.')[-1]
+            return domain
+        else:
+            print(f'No domain found for {company_name} in domain_search_1')
+            return None
 
     def domain_search_2(self, company_name):
         response = requests.get(f'https://autocomplete.clearbit.com/v1/companies/suggest?query={company_name}')

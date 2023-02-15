@@ -104,6 +104,7 @@ class VerifyEmailService:
             smtp.mail(self.source_addr)
             test_resp = smtp.rcpt(address.addr)
             catch_all_resp = smtp.rcpt(self._random_email(address.domain))
+            # print(test_resp)
             if test_resp[0] == 250:
                 deliverable = True
                 if catch_all_resp[0] == 250:

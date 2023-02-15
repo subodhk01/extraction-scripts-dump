@@ -1,4 +1,5 @@
-import sys, csv, requests
+import sys, csv, requests, time, threading
+from slugify import slugify
 from dotenv import load_dotenv
 load_dotenv()
 
@@ -27,26 +28,25 @@ extract_domain = extraction_container.extract_domain()
 email_creator = extraction_container.email_creator()
 email_verify = extraction_container.email_verify()
 
-if __name__ == "__main__":
-    extraction_id = sys.argv[1]
-    clear_output_files()
-
-    data_file = "data2.csv"
-    file_key = "extraction_data/{extraction_id}/stage1/output.csv".format(extraction_id=extraction_id)
-    s3.download_file(
-        bucket=BUCKET_NAME, key=file_key, download_path=data_file
-    )
-    
-    with open(data_file, "r") as f:
-        data = f.readlines()
-        data = data[1:]
-        for line in data:
-            data_found = False
-
+def process_data(data):
+    for line in data:
+        data_found = False
+        try:
             line = line.strip()
-            first_name = line.split(",")[0].lower().replace(" ", "").strip()
-            last_name = line.split(",")[1].lower().replace(" ", "").strip()
+            name = line.split(",")[0]
+            
+            first_name = name.split(" ")[0].lower().replace(" ", "").replace(".", "").strip()
+            first_name = slugify(first_name)
+
+            last_name = name.split(" ")[-1].lower().replace(" ", "").replace(".", "").strip()
+            last_name = slugify(last_name)
+
             company_name = line.split(",")[2]
+            if not company_name:
+                print("No company name found for: ", first_name, last_name)
+                with open('failed_entries.csv', 'a') as f:
+                    f.write(f"{first_name},{last_name},No company name found\n")
+                continue
             domains = extract_domain.extract_domains(company_name)
 
             # if no domains found, skip
@@ -75,6 +75,7 @@ if __name__ == "__main__":
                         continue
                     print('\tChecking email: ', email)
                     email_verify_result = email_verify.verify(email)
+                    # print('\t\tResult: ', email_verify_result)
                     if email_verify_result['catch_all']:
                         is_catch_all_domain = True
                         print(f"\t{domain} - Catch all domain found")
@@ -91,6 +92,44 @@ if __name__ == "__main__":
             if not data_found:
                 with open(FAILED_ENTRIES_OUTPUT_FILE, 'a') as f:
                     f.write(f"{first_name},{last_name},{company_name},Email not found\n")
+        except Exception as e:
+            print("Error: ", e)
+            with open(FAILED_ENTRIES_OUTPUT_FILE, 'a') as f:
+                f.write(f"{first_name},{last_name},{company_name},Error: {e}\n")
+
+if __name__ == "__main__":
+    extraction_id = sys.argv[1]
+    offset = int(sys.argv[2]) if len(sys.argv) > 2 else 0
+
+    # clear_output_files()
+
+    data_file = "data2.csv"
+    file_key = "extraction_data/{extraction_id}/stage1/output.csv".format(extraction_id=extraction_id)
+    s3.download_file(
+        bucket=BUCKET_NAME, key=file_key, download_path=data_file
+    )
+
+    data = []
+    
+    with open(data_file, "r") as f:
+        data = f.readlines()
+    
+    data = data[offset:]
+    
+    start_time = time.perf_counter()
+    threads = []
+    for i in range(0, 10):
+        t = threading.Thread(target=process_data, args=(data[i::10],))
+        threads.append(t)
+        t.start()
+    for t in threads:
+        t.join()
+    end_time = time.perf_counter()
+    print(f"Total time: {end_time - start_time} seconds")
+
+    data = data[offset+1:]
+    process_data(data)
+        
 
     print("starting found entries file upload to s3")
     s3.upload_object(
